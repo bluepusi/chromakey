@@ -1,0 +1,463 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:linear-gradient(135deg,#1a1a1f 0%,#242428 40%,#1c1c22 100%);min-height:100vh;display:flex;align-items:flex-start;justify-content:center;font-family:'DM Sans',sans-serif;color:#e8e8e8;padding:20px}
+  .outer{display:flex;flex-direction:column;align-items:center;gap:0;width:100%;max-width:680px}
+  .main-row{display:flex;align-items:flex-start;gap:32px;width:100%}
+  .wheel-col{display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0}
+  #canvas-wrap{position:relative;width:320px;height:320px;cursor:crosshair;user-select:none}
+  #wheelCanvas,#pointerCanvas{position:absolute;inset:0}
+  #pointerCanvas{pointer-events:none}
+  .hint{font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:0.05em;font-family:'Space Mono',monospace;text-align:center}
+  .info-col{display:flex;flex-direction:column;gap:10px;flex:1;min-width:0}
+  .icard{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:12px 14px}
+  .ilabel{font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:rgba(255,255,255,0.35);font-family:'Space Mono',monospace;margin-bottom:5px}
+  .ivalue{font-size:16px;font-weight:500;color:#f0f0f0;font-family:'Space Mono',monospace}
+  .ivalue.name{font-size:18px;font-family:'DM Sans',sans-serif;font-weight:300}
+  .swatch{width:100%;height:60px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);position:relative;overflow:hidden;cursor:pointer;transition:background-color 0.06s}
+  .swatch::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.1) 0%,transparent 50%)}
+  .copy-btn{position:absolute;bottom:7px;right:7px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:rgba(255,255,255,0.8);font-size:10px;font-family:'Space Mono',monospace;padding:4px 9px;cursor:pointer;z-index:4}
+  .copy-fb{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);color:#fff;font-size:12px;font-family:'Space Mono',monospace;border-radius:inherit;opacity:0;transition:opacity 0.2s;z-index:5;pointer-events:none}
+  .chips{display:flex;gap:6px}
+  .chip{flex:1;background:rgba(255,255,255,0.05);border-radius:8px;padding:7px 4px;text-align:center}
+  .clabel{font-size:9px;color:rgba(255,255,255,0.3);letter-spacing:0.1em;font-family:'Space Mono',monospace;display:block;margin-bottom:2px}
+  .cval{font-size:13px;font-family:'Space Mono',monospace;font-weight:700;color:#e8e8e8}
+  .dots{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
+  .hdot{width:20px;height:20px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);cursor:pointer;transition:transform 0.15s;flex-shrink:0}
+  .hdot:hover{transform:scale(1.2)}
+  .hsdot{width:16px;height:16px;border-radius:4px;cursor:pointer;border:1px solid rgba(255,255,255,0.1);transition:transform 0.15s;flex-shrink:0}
+  .hsdot:hover{transform:scale(1.15)}
+  .settings-bar{display:flex;justify-content:flex-end;width:100%;margin-top:8px}
+  .settings-btn{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:7px 14px;color:rgba(255,255,255,0.55);font-size:11px;font-family:'Space Mono',monospace;letter-spacing:0.08em;cursor:pointer;transition:background 0.2s,color 0.2s;display:flex;align-items:center;gap:7px}
+  .settings-btn:hover{background:rgba(255,255,255,0.11);color:rgba(255,255,255,0.85)}
+  .spanel{background:#1e1e24;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:16px;width:100%;margin-top:8px;display:none}
+  .spanel.open{display:block}
+  .stitle{font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:rgba(255,255,255,0.35);font-family:'Space Mono',monospace;margin-bottom:10px}
+  .srow{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+  .srow:last-child{border-bottom:none}
+  .sname{font-size:13px;color:rgba(255,255,255,0.72)}
+  .sdesc{font-size:11px;color:rgba(255,255,255,0.28);margin-top:1px}
+  .tog{width:36px;height:20px;border-radius:10px;background:rgba(255,255,255,0.1);border:none;cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0}
+  .tog.on{background:rgba(100,180,100,0.55)}
+  .tog::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,0.7);top:3px;left:3px;transition:left 0.2s,background 0.2s}
+  .tog.on::after{left:19px;background:#fff}
+  .bgswatches{display:flex;gap:5px;margin-top:6px}
+  .bgsw{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:border-color 0.15s,transform 0.15s}
+  .bgsw:hover{transform:scale(1.15)}
+  .bgsw.active{border-color:rgba(255,255,255,0.65)}
+</style>
+
+<div class="outer">
+  <div class="main-row">
+    <div class="wheel-col">
+      <div id="canvas-wrap">
+        <canvas id="wheelCanvas" width="320" height="320"></canvas>
+        <canvas id="pointerCanvas" width="320" height="320"></canvas>
+      </div>
+      <div class="hint" id="hintTxt">hue 50° · lightness 50%</div>
+    </div>
+
+    <div class="info-col">
+      <div class="swatch" id="swatchEl">
+        <button class="copy-btn" id="copyBtn">copy hex</button>
+        <div class="copy-fb" id="copyFb">copied!</div>
+      </div>
+      <div class="icard">
+        <div class="ilabel">Color Name</div>
+        <div class="ivalue name" id="colorName">Yellow</div>
+      </div>
+      <div class="icard">
+        <div class="ilabel">Hex</div>
+        <div class="ivalue" id="hexVal">#FFD700</div>
+      </div>
+      <div class="icard">
+        <div class="ilabel">RGB</div>
+        <div class="chips">
+          <div class="chip"><span class="clabel">R</span><span class="cval" id="rVal">255</span></div>
+          <div class="chip"><span class="clabel">G</span><span class="cval" id="gVal">215</span></div>
+          <div class="chip"><span class="clabel">B</span><span class="cval" id="bVal">0</span></div>
+        </div>
+      </div>
+      <div class="icard">
+        <div class="ilabel">HSL</div>
+        <div class="chips">
+          <div class="chip"><span class="clabel">H</span><span class="cval" id="hVal">50</span></div>
+          <div class="chip"><span class="clabel">S</span><span class="cval" id="sVal">100%</span></div>
+          <div class="chip"><span class="clabel">L</span><span class="cval" id="lVal">50%</span></div>
+        </div>
+      </div>
+      <div class="icard">
+        <div class="ilabel">Harmony</div>
+        <div class="dots" id="harmDots"></div>
+      </div>
+      <div class="icard">
+        <div class="ilabel">History</div>
+        <div class="dots" id="histDots"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-bar">
+    <button class="settings-btn" id="settingsBtn">
+      <svg width="13" height="13" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="9" r="2.5"/><path d="M9 1v2M9 15v2M1 9h2M15 9h2M3.05 3.05l1.41 1.41M13.54 13.54l1.41 1.41M3.05 14.95l1.41-1.41M13.54 4.46l1.41-1.41"/></svg>
+      settings
+    </button>
+  </div>
+
+  <div class="spanel" id="spanel">
+    <div class="stitle">Settings</div>
+    <div class="srow">
+      <div><div class="sname">Dot pointer</div><div class="sdesc">Switch arrow to dot</div></div>
+      <button class="tog" id="dotTog"></button>
+    </div>
+    <div class="srow">
+      <div><div class="sname">Complementary line</div><div class="sdesc">Show opposite hue</div></div>
+      <button class="tog on" id="compTog"></button>
+    </div>
+    <div class="srow">
+      <div><div class="sname">Harmony markers</div><div class="sdesc">Triadic / analogous</div></div>
+      <button class="tog on" id="harmTog"></button>
+    </div>
+    <div class="srow">
+      <div><div class="sname">Smooth drag</div><div class="sdesc">Eased rotation</div></div>
+      <button class="tog on" id="smoothTog"></button>
+    </div>
+    <div class="srow">
+      <div>
+        <div class="sname">Background</div>
+        <div class="bgswatches">
+          <div class="bgsw active" style="background:#1e1e22" data-bg="linear-gradient(135deg,#1a1a1f 0%,#242428 40%,#1c1c22 100%)"></div>
+          <div class="bgsw" style="background:#0d1117" data-bg="linear-gradient(135deg,#0d1117 0%,#161b22 100%)"></div>
+          <div class="bgsw" style="background:#1a0a2e" data-bg="linear-gradient(135deg,#1a0a2e 0%,#2d1b4e 100%)"></div>
+          <div class="bgsw" style="background:#0a1628" data-bg="linear-gradient(135deg,#0a1628 0%,#152440 100%)"></div>
+          <div class="bgsw" style="background:#1a1208" data-bg="linear-gradient(135deg,#1a1208 0%,#2a1e0a 100%)"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const W=320,PAD=22;
+const CX=W/2,CY=W/2;
+const OUTER=W/2-PAD;
+const INNER=Math.round(OUTER*0.54);
+const SAT_R=INNER-8;
+
+const wc=document.getElementById('wheelCanvas');
+const pc=document.getElementById('pointerCanvas');
+const wCtx=wc.getContext('2d');
+const pCtx=pc.getContext('2d');
+
+let hue=50,lightness=50,saturation=100;
+let dragging=false,dragTarget=null;
+let useDot=false,showComp=true,showHarm=true,useSmooth=true;
+let targetHue=50,velHue=0;
+let harmMode='triadic';
+let history=[],lastHex='';
+let satDragStartX=0,satDragStartVal=100;
+
+function drawWheel(){
+  wCtx.clearRect(0,0,W,W);
+  for(let i=0;i<360;i++){
+    const a1=(i/360)*Math.PI*2-Math.PI/2;
+    const a2=((i+1.2)/360)*Math.PI*2-Math.PI/2;
+    wCtx.beginPath();
+    wCtx.moveTo(CX,CY);
+    wCtx.arc(CX,CY,OUTER,a1,a2);
+    wCtx.closePath();
+    wCtx.fillStyle=`hsl(${i},100%,${lightness}%)`;
+    wCtx.fill();
+  }
+  wCtx.beginPath();
+  wCtx.arc(CX,CY,INNER,0,Math.PI*2);
+  wCtx.fillStyle='#1e1e22';
+  wCtx.fill();
+
+  const sg=wCtx.createLinearGradient(CX-SAT_R,CY,CX+SAT_R,CY);
+  sg.addColorStop(0,`hsl(${hue},0%,${lightness}%)`);
+  sg.addColorStop(1,`hsl(${hue},100%,${lightness}%)`);
+  wCtx.save();
+  wCtx.beginPath();
+  wCtx.arc(CX,CY,SAT_R,0,Math.PI*2);
+  wCtx.clip();
+  wCtx.fillStyle=sg;
+  wCtx.fillRect(CX-SAT_R,CY-SAT_R,SAT_R*2,SAT_R*2);
+  wCtx.restore();
+  wCtx.beginPath();
+  wCtx.arc(CX,CY,SAT_R,0,Math.PI*2);
+  wCtx.strokeStyle='rgba(255,255,255,0.07)';
+  wCtx.lineWidth=1;
+  wCtx.stroke();
+
+  const sx=CX-SAT_R+((saturation/100)*(SAT_R*2));
+  wCtx.beginPath();
+  wCtx.arc(sx,CY,7,0,Math.PI*2);
+  wCtx.fillStyle=`hsl(${hue},${saturation}%,${lightness}%)`;
+  wCtx.fill();
+  wCtx.strokeStyle='rgba(255,255,255,0.9)';
+  wCtx.lineWidth=2;
+  wCtx.stroke();
+
+  wCtx.fillStyle='rgba(255,255,255,0.18)';
+  wCtx.font='9px Space Mono,monospace';
+  wCtx.fillText('SAT',CX-SAT_R+3,CY+SAT_R-5);
+}
+
+function drawPointer(){
+  pCtx.clearRect(0,0,W,W);
+  const rad=(hue/360)*Math.PI*2-Math.PI/2;
+  const mid=(INNER+OUTER)/2;
+
+  if(showComp){
+    const cr=rad+Math.PI;
+    const cpx=CX+Math.cos(cr)*mid,cpy=CY+Math.sin(cr)*mid;
+    pCtx.beginPath();
+    pCtx.moveTo(CX+Math.cos(rad)*(INNER+2),CY+Math.sin(rad)*(INNER+2));
+    pCtx.lineTo(CX+Math.cos(cr)*(INNER+2),CY+Math.sin(cr)*(INNER+2));
+    pCtx.strokeStyle='rgba(255,255,255,0.1)';
+    pCtx.lineWidth=1;
+    pCtx.setLineDash([3,5]);
+    pCtx.stroke();
+    pCtx.setLineDash([]);
+    pCtx.beginPath();
+    pCtx.arc(cpx,cpy,5,0,Math.PI*2);
+    pCtx.fillStyle=`hsl(${(hue+180)%360},${saturation}%,${lightness}%)`;
+    pCtx.fill();
+    pCtx.strokeStyle='rgba(255,255,255,0.3)';
+    pCtx.lineWidth=1;
+    pCtx.stroke();
+  }
+
+  if(showHarm){
+    const deltas=harmMode==='triadic'?[120,240]:[-30,30];
+    deltas.forEach(d=>{
+      const hr=rad+(d/360)*Math.PI*2;
+      const hpx=CX+Math.cos(hr)*mid,hpy=CY+Math.sin(hr)*mid;
+      pCtx.beginPath();
+      pCtx.arc(hpx,hpy,4,0,Math.PI*2);
+      pCtx.fillStyle=`hsl(${(hue+d+360)%360},${saturation}%,${lightness}%)`;
+      pCtx.fill();
+      pCtx.strokeStyle='rgba(255,255,255,0.3)';
+      pCtx.lineWidth=1;
+      pCtx.stroke();
+    });
+  }
+
+  const PDIST=OUTER+16;
+  const px=CX+Math.cos(rad)*PDIST;
+  const py=CY+Math.sin(rad)*PDIST;
+
+  if(useDot){
+    pCtx.beginPath();
+    pCtx.arc(px,py,10,0,Math.PI*2);
+    const dg=pCtx.createRadialGradient(px,py,0,px,py,10);
+    dg.addColorStop(0,`hsl(${hue},${saturation}%,${Math.min(lightness+10,90)}%)`);
+    dg.addColorStop(1,`hsl(${hue},${saturation}%,${Math.max(lightness-10,10)}%)`);
+    pCtx.fillStyle=dg;
+    pCtx.fill();
+    pCtx.strokeStyle='rgba(255,255,255,0.75)';
+    pCtx.lineWidth=2;
+    pCtx.stroke();
+    pCtx.beginPath();
+    pCtx.arc(px,py,3,0,Math.PI*2);
+    pCtx.fillStyle='rgba(255,255,255,0.9)';
+    pCtx.fill();
+  } else {
+    const inward=Math.atan2(CY-py,CX-px);
+    const perp=inward+Math.PI/2;
+    const tipX=px+Math.cos(inward)*24;
+    const tipY=py+Math.sin(inward)*24;
+    const baseX=px-Math.cos(inward)*3;
+    const baseY=py-Math.sin(inward)*3;
+    const hw=14;
+    const l1x=baseX+Math.cos(perp)*hw;
+    const l1y=baseY+Math.sin(perp)*hw;
+    const l2x=baseX-Math.cos(perp)*hw;
+    const l2y=baseY-Math.sin(perp)*hw;
+    pCtx.beginPath();
+    pCtx.moveTo(tipX,tipY);
+    pCtx.lineTo(l1x,l1y);
+    pCtx.lineTo(l2x,l2y);
+    pCtx.closePath();
+    const ag=pCtx.createLinearGradient(tipX,tipY,baseX,baseY);
+    ag.addColorStop(0,'#111');
+    ag.addColorStop(0.6,'#333');
+    ag.addColorStop(1,'#555');
+    pCtx.fillStyle=ag;
+    pCtx.fill();
+    pCtx.strokeStyle='rgba(255,255,255,0.2)';
+    pCtx.lineWidth=1.5;
+    pCtx.stroke();
+    pCtx.beginPath();
+    pCtx.arc(px,py,5,0,Math.PI*2);
+    const cg=pCtx.createRadialGradient(px,py,0,px,py,5);
+    cg.addColorStop(0,'#666');
+    cg.addColorStop(1,'#222');
+    pCtx.fillStyle=cg;
+    pCtx.fill();
+    pCtx.strokeStyle='rgba(255,255,255,0.25)';
+    pCtx.lineWidth=1;
+    pCtx.stroke();
+  }
+}
+
+function hslToRgb(h,s,l){
+  s/=100;l/=100;
+  const k=n=>(n+h/30)%12;
+  const a=s*Math.min(l,1-l);
+  const f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));
+  return[Math.round(f(0)*255),Math.round(f(8)*255),Math.round(f(4)*255)];
+}
+
+function toHex(r,g,b){return'#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('').toUpperCase()}
+
+const cnames=[[0,'Red'],[15,'Red-Orange'],[22,'Orange'],[30,'Dark Orange'],[38,'Orange-Yellow'],[50,'Yellow'],[60,'Yellow-Green'],[80,'Chartreuse'],[100,'Green-Yellow'],[120,'Green'],[140,'Spring Green'],[160,'Mint'],[170,'Cyan-Green'],[180,'Cyan'],[190,'Cyan-Blue'],[200,'Sky Blue'],[210,'Azure'],[220,'Cornflower'],[240,'Blue'],[260,'Blue-Violet'],[270,'Violet'],[280,'Purple'],[300,'Magenta'],[320,'Pink'],[340,'Rose'],[360,'Red']];
+
+function getName(h,s,l){
+  if(s<12)return l<25?'Near Black':l>75?'Near White':'Gray';
+  if(l<15)return'Near Black';
+  if(l>85)return'Near White';
+  let best=cnames[0],md=360;
+  for(const[a,n]of cnames){const d=Math.min(Math.abs(h-a),360-Math.abs(h-a));if(d<md){md=d;best=[a,n];}}
+  return best[1];
+}
+
+function copyText(text){
+  try{
+    const ta=document.createElement('textarea');
+    ta.value=text;ta.style.cssText='position:fixed;opacity:0;top:0;left:0';
+    document.body.appendChild(ta);ta.focus();ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    return true;
+  }catch(e){return false;}
+}
+
+function updateInfo(){
+  const[r,g,b]=hslToRgb(hue,saturation,lightness);
+  const hex=toHex(r,g,b);
+  document.getElementById('swatchEl').style.backgroundColor=hex;
+  document.getElementById('hexVal').textContent=hex;
+  document.getElementById('rVal').textContent=r;
+  document.getElementById('gVal').textContent=g;
+  document.getElementById('bVal').textContent=b;
+  document.getElementById('hVal').textContent=Math.round(hue);
+  document.getElementById('sVal').textContent=Math.round(saturation)+'%';
+  document.getElementById('lVal').textContent=Math.round(lightness)+'%';
+  document.getElementById('colorName').textContent=getName(hue,saturation,lightness);
+  document.getElementById('hintTxt').textContent=`hue ${Math.round(hue)}° · lightness ${Math.round(lightness)}%`;
+
+  const deltas=showHarm?(harmMode==='triadic'?[0,120,240]:[0,-30,30,180]):[0];
+  const hd=document.getElementById('harmDots');
+  hd.innerHTML='';
+  deltas.forEach(d=>{
+    const h2=(hue+d+360)%360;
+    const[r2,g2,b2]=hslToRgb(h2,saturation,lightness);
+    const div=document.createElement('div');
+    div.className='hdot';
+    div.style.background=toHex(r2,g2,b2);
+    div.title=toHex(r2,g2,b2);
+    div.onclick=()=>{hue=h2;targetHue=h2;drawWheel();drawPointer();updateInfo();};
+    hd.appendChild(div);
+  });
+
+  if(hex!==lastHex){
+    lastHex=hex;
+    history.unshift({hex,h:hue,s:saturation,l:lightness});
+    if(history.length>14)history.pop();
+    const hst=document.getElementById('histDots');
+    hst.innerHTML='';
+    history.forEach(c=>{
+      const div=document.createElement('div');
+      div.className='hsdot';
+      div.style.background=c.hex;
+      div.title=c.hex;
+      div.onclick=()=>{hue=c.h;targetHue=c.h;saturation=c.s;lightness=c.l;drawWheel();drawPointer();updateInfo();};
+      hst.appendChild(div);
+    });
+  }
+}
+
+function distC(x,y){return Math.sqrt((x-CX)**2+(y-CY)**2)}
+function isRing(x,y){const d=distC(x,y);return d>=INNER-6&&d<=OUTER+24}
+function isSat(x,y){return distC(x,y)<=SAT_R+10&&distC(x,y)<=INNER-2}
+function getHue(x,y){let a=Math.atan2(y-CY,x-CX)+Math.PI/2;if(a<0)a+=Math.PI*2;return(a/(Math.PI*2))*360}
+
+const wrap=document.getElementById('canvas-wrap');
+
+function onStart(x,y){
+  dragTarget=null;
+  if(isSat(x,y)){dragTarget='sat';satDragStartX=x;satDragStartVal=saturation;}
+  else if(isRing(x,y)){dragTarget='hue';}
+  dragging=dragTarget!=null;
+}
+function onMove(x,y){
+  if(!dragging)return;
+  if(dragTarget==='hue'){
+    const nh=getHue(x,y);
+    if(useSmooth){targetHue=nh;}
+    else{hue=nh;targetHue=nh;drawWheel();drawPointer();updateInfo();}
+  } else if(dragTarget==='sat'){
+    const dx=x-satDragStartX;
+    saturation=Math.max(0,Math.min(100,satDragStartVal+dx*(100/(SAT_R*2))));
+    drawWheel();drawPointer();updateInfo();
+  }
+}
+
+wrap.addEventListener('mousedown',e=>{const r=wrap.getBoundingClientRect();onStart(e.clientX-r.left,e.clientY-r.top);});
+window.addEventListener('mousemove',e=>{if(!dragging)return;const r=wrap.getBoundingClientRect();onMove(e.clientX-r.left,e.clientY-r.top);});
+window.addEventListener('mouseup',()=>{dragging=false;dragTarget=null;});
+wrap.addEventListener('wheel',e=>{
+  e.preventDefault();
+  lightness=Math.max(10,Math.min(90,lightness-e.deltaY*0.04));
+  drawWheel();drawPointer();updateInfo();
+},{passive:false});
+wrap.addEventListener('touchstart',e=>{e.preventDefault();const t=e.touches[0],r=wrap.getBoundingClientRect();onStart(t.clientX-r.left,t.clientY-r.top);},{passive:false});
+wrap.addEventListener('touchmove',e=>{if(!dragging)return;e.preventDefault();const t=e.touches[0],r=wrap.getBoundingClientRect();onMove(t.clientX-r.left,t.clientY-r.top);},{passive:false});
+wrap.addEventListener('touchend',()=>{dragging=false;dragTarget=null;});
+
+document.getElementById('copyBtn').addEventListener('click',()=>{
+  const[r,g,b]=hslToRgb(hue,saturation,lightness);
+  const hex=toHex(r,g,b);
+  copyText(hex);
+  const fb=document.getElementById('copyFb');
+  fb.style.opacity='1';
+  setTimeout(()=>fb.style.opacity='0',1000);
+});
+
+document.getElementById('settingsBtn').addEventListener('click',()=>{
+  document.getElementById('spanel').classList.toggle('open');
+});
+
+function mkTog(id,init,cb){
+  const b=document.getElementById(id);let s=init;if(s)b.classList.add('on');
+  b.addEventListener('click',()=>{s=!s;b.classList.toggle('on',s);cb(s);});
+}
+mkTog('dotTog',false,v=>{useDot=v;drawPointer();});
+mkTog('compTog',true,v=>{showComp=v;drawPointer();});
+mkTog('harmTog',true,v=>{showHarm=v;harmMode=harmMode==='triadic'?'analogous':'triadic';drawPointer();updateInfo();});
+mkTog('smoothTog',true,v=>{useSmooth=v;});
+
+document.querySelectorAll('.bgsw').forEach(el=>{
+  el.addEventListener('click',()=>{
+    document.querySelectorAll('.bgsw').forEach(s=>s.classList.remove('active'));
+    el.classList.add('active');
+    document.body.style.background=el.dataset.bg;
+  });
+});
+
+function animate(){
+  if(useSmooth&&dragTarget==='hue'&&dragging){
+    let d=targetHue-hue;
+    if(Math.abs(d)>180)d=d>0?d-360:d+360;
+    velHue=velHue*0.6+d*0.35;
+    hue=(hue+velHue+360)%360;
+    drawWheel();drawPointer();updateInfo();
+  }
+  requestAnimationFrame(animate);
+}
+
+drawWheel();drawPointer();updateInfo();animate();
+</script>
